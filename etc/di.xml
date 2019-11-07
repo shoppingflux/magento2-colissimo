@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="ShoppingFeed\Manager\Model\Shipping\Method\ApplierPool" shared="true">
+        <arguments>
+            <argument name="appliers" xsi:type="array">
+                <item name="laposte_colissimo" xsi:type="object">ShoppingFeed\Colissimo\Model\Shipping\Method\Applier\LaPoste\Colissimo</item>
+            </argument>
+        </arguments>
+    </type>
+
+    <preference for="ShoppingFeed\Colissimo\Model\Shipping\Method\Applier\Config\LaPoste\ColissimoInterface" type="ShoppingFeed\Colissimo\Model\Shipping\Method\Applier\Config\LaPoste\Colissimo"/>
+
+    <type name="ShoppingFeed\Colissimo\Model\Shipping\Method\Applier\LaPoste\Colissimo">
+        <arguments>
+            <argument name="checkoutSession" xsi:type="object">\Magento\Checkout\Model\Session\Proxy</argument>
+            <argument name="lpcHelper" xsi:type="object">\LaPoste\Colissimo\Helper\Data\Proxy</argument>
+            <argument name="countryHelper" xsi:type="object">\ShoppingFeed\Colissimo\Helper\Country\Proxy</argument>
+        </arguments>
+    </type>
+</config>

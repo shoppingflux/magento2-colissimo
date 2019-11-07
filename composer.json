@@ -1,0 +1,20 @@
+{
+    "name": "shoppingfeed/magento2-colissimo",
+    "type": "magento2-module",
+    "version": "1.0.0",
+    "license": "OSL-3.0",
+    "description": "LaPoste Colissimo shipping method applier for the Shopping Feed Magento 2 module.",
+    "require": {
+        "ext-soap": "*",
+        "laposte/magento2-colissimo-module": ">=1.0.0",
+        "shoppingfeed/magento2-manager": ">=0.26.0"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "ShoppingFeed\\Colissimo\\": ""
+        }
+    }
+}
