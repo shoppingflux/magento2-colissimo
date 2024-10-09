@@ -160,6 +160,20 @@ class Colissimo extends AbstractApplier
         return $pickupPointData;
     }
 
+    /**
+     * @param MarketplaceAddressInterface $address
+     * @return string|null
+     */
+    private function getAddressPickupPointId(MarketplaceAddressInterface $address)
+    {
+        return (
+            empty($pickupPointId = trim($address->getRelayPointId()))
+            && empty($pickupPointId = trim($address->getMiscData()))
+        )
+            ? null
+            : $pickupPointId;
+    }
+
     public function applyToQuoteShippingAddress(
         MarketplaceOrderInterface $marketplaceOrder,
         MarketplaceAddressInterface $marketplaceShippingAddress,
@@ -179,7 +193,7 @@ class Colissimo extends AbstractApplier
         if ($config->isPickupPointDeliveryEnabled($configData)
             && $this->isPickupDeliveryAvailableForCountry($countryId)
             && isset($availableProducts[ColissimoCarrier::CODE_SHIPPING_METHOD_RELAY])
-            && !empty($pickupPointId = trim($marketplaceShippingAddress->getMiscData()))
+            && !empty($pickupPointId = $this->getAddressPickupPointId($marketplaceShippingAddress))
             && ($pickupPointData = $this->getPickupPointDataById($pickupPointId, $countryId, $storeId))
         ) {
             $additionalData['product_code'] = $pickupPointData->getData('type');
