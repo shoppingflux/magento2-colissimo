@@ -11,8 +11,8 @@ use Magento\Framework\DataObjectFactory;
 use Magento\Quote\Model\Quote\Address as QuoteAddress;
 use ShoppingFeed\Colissimo\Helper\Country as CountryHelper;
 use ShoppingFeed\Colissimo\Model\Shipping\Method\Applier\Config\LaPoste\ColissimoInterface as ConfigInterface;
-use ShoppingFeed\Manager\Api\Data\Marketplace\OrderInterface as MarketplaceOrderInterface;
 use ShoppingFeed\Manager\Api\Data\Marketplace\Order\AddressInterface as MarketplaceAddressInterface;
+use ShoppingFeed\Manager\Api\Data\Marketplace\OrderInterface as MarketplaceOrderInterface;
 use ShoppingFeed\Manager\Model\Shipping\Method\AbstractApplier;
 use ShoppingFeed\Manager\Model\Shipping\Method\Applier\Result;
 use ShoppingFeed\Manager\Model\Shipping\Method\Applier\ResultFactory;
@@ -24,8 +24,11 @@ class Colissimo extends AbstractApplier
 {
     const LPC_API_ENDPOINT_FIND_PICKUP_POINT_BY_ID = 'findPointRetraitAcheminementByID';
 
+    const CONFIG_PATH_LPC_CONNECTION_MODE = 'lpc_general/connectionMode';
+    const CONFIG_PATH_LPC_API_KEY = 'lpc_general/api_key';
     const CONFIG_PATH_LPC_ACCOUNT_NUMBER = 'lpc_general/id_webservices';
     const CONFIG_PATH_LPC_ACCOUNT_PASSWORD = 'lpc_general/pwd_webservices';
+    const CONFIG_PATH_LPC_PARENT_ACCOUNT_ID = 'lpc_general/parent_id_webservices';
     const CONFIG_PATH_LPC_PREPARATION_DELAY = 'lpc_labels/averagePreparationDelay';
 
     const SESSION_KEY_LPC_PICKUP_POINT_DATA = 'lpc_relay_information';
@@ -110,30 +113,55 @@ class Colissimo extends AbstractApplier
         $pickupPointData = null;
         $networkCodes = ('FR' === $countryId) ? [ null ] : static::COUNTRY_PICKUP_NETWORK_CODES[$countryId];
 
+        $payload = [
+            'id' => $pickupPointId,
+            'langue' => $countryId,
+        ];
+
         $soapClient = new \SoapClient(LpcRelayApi::API_RELAYS_WSDL_URL);
-        $accountNumber = $this->lpcHelper->getAdvancedConfigValue(static::CONFIG_PATH_LPC_ACCOUNT_NUMBER, $storeId);
-        $accountPassword = $this->lpcHelper->getAdvancedConfigValue(static::CONFIG_PATH_LPC_ACCOUNT_PASSWORD, $storeId);
+
+        $connectionMode = $this->lpcHelper->getAdvancedConfigValue(
+            static::CONFIG_PATH_LPC_CONNECTION_MODE
+        );
+
+        if ('api' === $connectionMode) {
+            $payload['apikey'] = $this->lpcHelper->getAdvancedConfigValue(
+                static::CONFIG_PATH_LPC_API_KEY
+            );
+        } else {
+            $payload['password'] = $this->lpcHelper->getAdvancedConfigValue(
+                static::CONFIG_PATH_LPC_ACCOUNT_PASSWORD
+            );
+
+            $payload['accountNumber'] = $this->lpcHelper->getAdvancedConfigValue(
+                static::CONFIG_PATH_LPC_ACCOUNT_NUMBER
+            );
+        }
+
+        $parentAccountId = $this->lpcHelper->getAdvancedConfigValue(
+            static::CONFIG_PATH_LPC_PARENT_ACCOUNT_ID
+        );
+
+        if (!empty($parentAccountId)) {
+            $payload['codTiersPourPartenaire'] = $parentAccountId;
+        }
+
+        $preparationDelay = (int) $this->lpcHelper->getAdvancedConfigValue(
+            static::CONFIG_PATH_LPC_PREPARATION_DELAY
+        );
 
         $estimatedShippingDate = new \DateTime();
-        $preparationDelay = (int) $this->lpcHelper->getAdvancedConfigValue(static::CONFIG_PATH_LPC_PREPARATION_DELAY);
         $estimatedShippingDate->add(new \DateInterval('P' . $preparationDelay . 'D'));
+
+        $payload['date'] = $estimatedShippingDate->format('d/m/Y');
 
         foreach ($networkCodes as $networkCode) {
             try {
+                $payload['reseau'] = $networkCode;
+
                 $result = $soapClient->__soapCall(
                     static::LPC_API_ENDPOINT_FIND_PICKUP_POINT_BY_ID,
-                    [
-                        array_filter(
-                            [
-                                'accountNumber' => $accountNumber,
-                                'password' => $accountPassword,
-                                'id' => $pickupPointId,
-                                'langue' => $countryId,
-                                'reseau' => $networkCode,
-                                'date' => $estimatedShippingDate->format('d/m/Y'),
-                            ]
-                        ),
-                    ]
+                    [ array_filter($payload) ]
                 );
 
                 $result = (array) json_decode(json_encode($result), true);
@@ -187,7 +215,7 @@ class Colissimo extends AbstractApplier
         $countryId = strtoupper($quoteShippingAddress->getCountryId());
         $postcode = trim($quoteShippingAddress->getPostcode());
 
-        $additionalData = array();
+        $additionalData = [];
         $availableProducts = $this->countryHelper->getAvailableProductsForDestination($countryId, $postcode);
 
         if ($config->isPickupPointDeliveryEnabled($configData)
@@ -260,7 +288,7 @@ class Colissimo extends AbstractApplier
         Result $result,
         DataObject $configData
     ) {
-        $this->checkoutSession->setData(static::SESSION_KEY_LPC_PICKUP_POINT_DATA, array());
+        $this->checkoutSession->setData(static::SESSION_KEY_LPC_PICKUP_POINT_DATA, []);
 
         if ($result->getMethodCode() === ColissimoCarrier::CODE_SHIPPING_METHOD_RELAY) {
             $additionalData = $result->getAdditionalData();
@@ -279,7 +307,7 @@ class Colissimo extends AbstractApplier
 
                 $this->checkoutSession->setData(
                     static::SESSION_KEY_LPC_PICKUP_POINT_DATA,
-                    array(
+                    [
                         'id' => $additionalData['pickup_point_id'],
                         'type' => $additionalData['product_code'],
                         'name' => $company,
@@ -287,7 +315,7 @@ class Colissimo extends AbstractApplier
                         'post_code' => $quoteShippingAddress->getPostcode(),
                         'city' => $quoteShippingAddress->getCity(),
                         'country' => $quoteShippingAddress->getCountryId(),
-                    )
+                    ]
                 );
             }
         }
