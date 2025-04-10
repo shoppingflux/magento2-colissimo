@@ -8,7 +8,10 @@
         </arguments>
     </type>
 
-    <preference for="ShoppingFeed\Colissimo\Model\Shipping\Method\Applier\Config\LaPoste\ColissimoInterface" type="ShoppingFeed\Colissimo\Model\Shipping\Method\Applier\Config\LaPoste\Colissimo"/>
+    <preference
+        for="ShoppingFeed\Colissimo\Model\Shipping\Method\Applier\Config\LaPoste\ColissimoInterface"
+        type="ShoppingFeed\Colissimo\Model\Shipping\Method\Applier\Config\LaPoste\Colissimo"
+    />
 
     <type name="ShoppingFeed\Colissimo\Model\Shipping\Method\Applier\LaPoste\Colissimo">
         <arguments>
@@ -16,5 +19,12 @@
             <argument name="lpcHelper" xsi:type="object">\LaPoste\Colissimo\Helper\Data\Proxy</argument>
             <argument name="countryHelper" xsi:type="object">\ShoppingFeed\Colissimo\Helper\Country\Proxy</argument>
         </arguments>
+    </type>
+
+    <type name="LaPoste\Colissimo\Observer\SetRelayInformationOrder">
+        <plugin
+            name="sfm_disable_relay_information_setter_admin_order_detection"
+            type="ShoppingFeed\Colissimo\Plugin\DisableRelaySetterAdminOrderDetection"
+        />
     </type>
 </config>
